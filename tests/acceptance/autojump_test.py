@@ -24,20 +24,27 @@ def test_autojump_returns_stable_results(tmpdir):
     environment['SHELL'] = bash
 
     def install_subject():
-        subprocess.run(['make', 'install'], check=True, env=environment, capture_output=True)
+        subprocess.run(
+            ['make', 'install'], check=True, env=environment, capture_output=True,
+        )
 
     subject_path = f'{os.getcwd()}/bin/autojump'
     subject_initializer_path = f'{os.getcwd()}/bin/autojump.sh'
 
     def autojump(*args):
-        shcmd = ' '.join([
-            'source',
-            shlex.quote(subject_initializer_path), ';',
-            shlex.quote(subject_path), ' '.join(map(str, args)),
-        ])
+        shcmd = ' '.join(
+            [
+                'source',
+                shlex.quote(subject_initializer_path),
+                ';',
+                shlex.quote(subject_path),
+                ' '.join(map(str, args)),
+            ],
+        )
 
         result = subprocess.run(
-            shcmd, executable='/bin/bash',
+            shcmd,
+            executable='/bin/bash',
             env=environment,
             capture_output=True,
             shell=True,
