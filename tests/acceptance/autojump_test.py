@@ -25,8 +25,8 @@ def test_autojump_returns_stable_results(tmpdir):
     environment['SHELL'] = bash
 
     def install_subject():
-        subprocess.run(
-            ['make', 'install'], check=True, env=environment, capture_output=True,
+        subprocess.check_output(
+            ['make', 'install'], env=environment, text=True,
         )
 
     subject_path = f'{os.getcwd()}/bin/autojump'
@@ -49,6 +49,7 @@ def test_autojump_returns_stable_results(tmpdir):
             env=environment,
             capture_output=True,
             shell=True,
+            text=True,
         )
         if result.returncode == 0:
             return result
@@ -75,7 +76,7 @@ def test_autojump_returns_stable_results(tmpdir):
     add_to_db(_create(join(tmpdir, 'foobarbar')), weight_bump=3)
 
     run_results = autojump('--complete', 'foo')
-    run_lines = run_results.stdout.decode('utf-8').splitlines()
+    run_lines = run_results.stdout.splitlines()
 
     assert run_lines == [
         f"foo__1__{join(tmpdir, 'foobarbar')}",
@@ -153,6 +154,7 @@ def test_jc_jumps_to_child_match(tmpdir):
             env=environment,
             capture_output=True,
             shell=True,
+            text=True,
         )
         if result.returncode == 0:
             return result
@@ -182,7 +184,7 @@ def test_jc_jumps_to_child_match(tmpdir):
     add_to_db(_create(tmpdir / 'baz' / 'baz'))
 
     run_results = jc_and_pwd(tmpdir / 'baz', 'bar')
-    run_lines = run_results.stdout.decode('utf-8').splitlines()
+    run_lines = run_results.stdout.splitlines()
 
     assert run_lines == [
         str(tmpdir / 'baz' / 'bar'),
