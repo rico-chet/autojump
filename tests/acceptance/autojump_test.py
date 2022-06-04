@@ -181,9 +181,9 @@ def test_jc_jumps_to_child_match(tmpdir):
     add_to_db(_create(tmpdir / 'baz' / 'bar'))
     add_to_db(_create(tmpdir / 'baz' / 'baz'))
 
-    run_results = autojump('--complete', str(tmpdir / 'baz'), 'bar')
+    run_results = jc_and_pwd(tmpdir / 'baz', 'bar')
     run_lines = run_results.stdout.decode('utf-8').splitlines()
 
     assert run_lines == [
-        f"bar__1__{str(tmpdir / 'baz' / 'baz')}",
+        str(tmpdir / 'baz' / 'bar'),
     ]
