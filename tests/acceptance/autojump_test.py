@@ -127,6 +127,41 @@ def test_jc_jumps_to_child_match(tmpdir):
             print(f'stderr: {result.stderr}')
             result.check_returncode()
 
+    def jc_and_pwd(working_directory, *args):
+        shcmd = ' '.join(
+            [
+                'source',
+                shlex.quote(subject_initializer_path),
+                ';',
+                'cd',
+                shlex.quote(str(working_directory)),
+                '&&'
+                'jc',
+                ' '.join(map(str, args)),
+                '&&',
+                'pwd',
+            ],
+        )
+
+        bash = shutil.which('bash')
+        if not bash:
+            raise Exception('`bash` not found')
+
+        result = subprocess.run(
+            shcmd,
+            executable=bash,
+            env=environment,
+            capture_output=True,
+            shell=True,
+        )
+        if result.returncode == 0:
+            return result
+        else:
+            print()
+            print(f'stdout: {result.stdout}')
+            print(f'stderr: {result.stderr}')
+            result.check_returncode()
+
     def add_to_db(path, weight_bump=0):
         autojump('--add', path)
         if weight_bump > 0:
