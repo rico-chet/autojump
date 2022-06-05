@@ -190,17 +190,17 @@ def find_matches(entries, needles, check_entries=True):
         path_exists = lambda _: True
 
     # `jc` uses multiple parameters, and its searches are subject to
-    # consecutive matches only.
-    consecutive_only = len(needles) >= 2
+    # anywhere-matches only.
+    anywhere_only = len(needles) >= 2
 
     entries_for_consecutive_matching, entries_for_fuzzy_matching, entries_for_anywhere_matching = tee(entries, 3)
     return ifilter(
         lambda entry: not is_cwd(entry) and path_exists(entry),
         sorted(
             set(chain(
-                match_consecutive(needles, entries_for_consecutive_matching, ignore_case),
-                iter([]) if consecutive_only else match_fuzzy(needles, entries_for_fuzzy_matching, ignore_case),
-                iter([]) if consecutive_only else match_anywhere(needles, entries_for_anywhere_matching, ignore_case),
+                iter([]) if anywhere_only else match_consecutive(needles, entries_for_consecutive_matching, ignore_case),
+                iter([]) if anywhere_only else match_fuzzy(needles, entries_for_fuzzy_matching, ignore_case),
+                match_anywhere(needles, entries_for_anywhere_matching, ignore_case),
             )), key=attrgetter('weight', 'path'),
             reverse=True,
         ),
