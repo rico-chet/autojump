@@ -186,7 +186,6 @@ def test_jc_jumps_to_child_match(tmpdir):
     run_results = jc_and_pwd(tmpdir / 'baz', 'bar')
     run_lines = run_results.stdout.splitlines()
 
-    # TODO: Make this a strict check once the duplication is fixed.
-    assert set(run_lines) == set([
+    assert run_lines == [
         str(tmpdir / 'baz' / 'bar'),
-    ])
+    ]
