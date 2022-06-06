@@ -85,6 +85,85 @@ def test_autojump_returns_stable_results(tmpdir):
     ]
 
 
+_subject_path = f'{os.getcwd()}/bin/autojump'
+_subject_initializer_path = f'{os.getcwd()}/bin/autojump.sh'
+
+
+def _autojump(*args, env=None):
+    shcmd = ' '.join(
+        [
+            'source',
+            shlex.quote(_subject_initializer_path),
+            ';',
+            shlex.quote(_subject_path),
+            ' '.join(map(str, args)),
+        ],
+    )
+
+    bash = shutil.which('bash')
+    if not bash:
+        raise Exception('`bash` not found')
+
+    result = subprocess.run(
+        shcmd,
+        executable=bash,
+        env=env,
+        capture_output=True,
+        shell=True,
+    )
+    if result.returncode == 0:
+        return result
+    else:
+        print()
+        print(f'stdout: {result.stdout}')
+        print(f'stderr: {result.stderr}')
+        result.check_returncode()
+
+
+def _jc_and_pwd(working_directory, *args, env=None):
+    args_strings = map(str, args)
+    args_quoted = map(shlex.quote, args_strings)
+
+    shcmd = ' && '.join(
+        [
+            f'source {shlex.quote(_subject_initializer_path)}',
+            f'jc {" ".join(args_quoted)}',
+            'pwd',
+        ],
+    )
+
+    bash = shutil.which('bash')
+    if not bash:
+        raise Exception('`bash` not found')
+
+    result = subprocess.run(
+        shcmd,
+        cwd=working_directory,
+        executable=bash,
+        capture_output=True,
+        env=env,
+        shell=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return result
+    else:
+        print(result.stdout)
+        print(result.stderr)
+        result.check_returncode()
+
+
+def add_to_db(path, weight_bump=0, env=None):
+    _autojump('--add', path, env=env)
+    if weight_bump > 0:
+        try:
+            oldpwd = os.getcwd()
+            os.chdir(path)
+            _autojump('--increase', weight_bump, env=env)
+        finally:
+            os.chdir(oldpwd)
+
+
 def test_jc_jumps_to_child_match(tmpdir):
     tmpdir = Path(tmpdir)
     base = str(tmpdir)
@@ -99,81 +178,6 @@ def test_jc_jumps_to_child_match(tmpdir):
             ['make', 'install'], check=True, env=environment, capture_output=True,
         )
 
-    subject_path = f'{os.getcwd()}/bin/autojump'
-    subject_initializer_path = f'{os.getcwd()}/bin/autojump.sh'
-
-    def autojump(*args):
-        shcmd = ' '.join(
-            [
-                'source',
-                shlex.quote(subject_initializer_path),
-                ';',
-                shlex.quote(subject_path),
-                ' '.join(map(str, args)),
-            ],
-        )
-
-        result = subprocess.run(
-            shcmd,
-            executable='/bin/bash',
-            env=environment,
-            capture_output=True,
-            shell=True,
-        )
-        if result.returncode == 0:
-            return result
-        else:
-            print()
-            print(f'stdout: {result.stdout}')
-            print(f'stderr: {result.stderr}')
-            result.check_returncode()
-
-    def jc_and_pwd(working_directory, *args):
-        shcmd = ' '.join(
-            [
-                'source',
-                shlex.quote(subject_initializer_path),
-                ';',
-                'cd',
-                shlex.quote(str(working_directory)),
-                '&&'
-                'jc',
-                ' '.join(map(str, args)),
-                '&&',
-                'pwd',
-            ],
-        )
-
-        bash = shutil.which('bash')
-        if not bash:
-            raise Exception('`bash` not found')
-
-        result = subprocess.run(
-            shcmd,
-            executable=bash,
-            env=environment,
-            capture_output=True,
-            shell=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            return result
-        else:
-            print()
-            print(f'stdout: {result.stdout}')
-            print(f'stderr: {result.stderr}')
-            result.check_returncode()
-
-    def add_to_db(path, weight_bump=0):
-        autojump('--add', path)
-        if weight_bump > 0:
-            try:
-                oldpwd = os.getcwd()
-                os.chdir(path)
-                autojump('--increase', weight_bump)
-            finally:
-                os.chdir(oldpwd)
-
     install_subject()
 
     add_to_db(_create(tmpdir / 'foo'), weight_bump=1)
@@ -183,9 +187,7 @@ def test_jc_jumps_to_child_match(tmpdir):
     add_to_db(_create(tmpdir / 'baz' / 'bar'))
     add_to_db(_create(tmpdir / 'baz' / 'baz'))
 
-    run_results = jc_and_pwd(tmpdir / 'baz', 'bar')
+    run_results = _jc_and_pwd(tmpdir / 'baz', 'bar', env=environment)
     run_lines = run_results.stdout.splitlines()
 
-    assert run_lines == [
-        str(tmpdir / 'baz' / 'bar'),
-    ]
+    assert Path(run_lines[-1]) == tmpdir / 'baz' / 'bar'

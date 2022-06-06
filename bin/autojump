@@ -51,6 +51,7 @@ from autojump_data import save
 from autojump_match import match_anywhere
 from autojump_match import match_consecutive
 from autojump_match import match_fuzzy
+from autojump_match import match_terminal
 from autojump_utils import first
 from autojump_utils import get_pwd
 from autojump_utils import get_tab_entry_info
@@ -116,6 +117,10 @@ def parse_arguments():
         '-d', '--decrease', metavar='WEIGHT', nargs='?', type=int,
         const=15, default=False,
         help='decrease current directory weight',
+    )
+    parser.add_argument(
+        '--child', action='store_true', default=False,
+        help='restrict matches to subdirectories of the first parameter',
     )
     parser.add_argument(
         '--complete', action='store_true', default=False,
@@ -202,6 +207,31 @@ def find_matches(entries, needles, check_entries=True):
                 iter([]) if anywhere_only else match_fuzzy(needles, entries_for_fuzzy_matching, ignore_case),
                 match_anywhere(needles, entries_for_anywhere_matching, ignore_case),
             )), key=attrgetter('weight', 'path'),
+            reverse=True,
+        ),
+    )
+
+
+def find_child_matches(entries, needles):
+    """Return an iterator to matching entries."""
+    if not isinstance(needles, list):
+        raise Exception('`needles` must be a list')
+
+    try:
+        cwd = os.getcwdu()
+    except OSError:
+        cwd = None
+
+    def is_cwd(entry):
+        return os.path.realpath(entry.path) == cwd
+
+    path_exists = lambda entry: os.path.exists(entry.path)
+
+    return ifilter(
+        lambda entry: not is_cwd(entry) and path_exists(entry),
+        sorted(
+            match_terminal(needles, entries, ignore_case=detect_smartcase(needles)),
+            key=attrgetter('weight', 'path'),
             reverse=True,
         ),
     )
@@ -331,6 +361,12 @@ def main(args):  # noqa
                     find_matches(entries, [tab_needle]),
                 ),
             )
+        elif args.child:
+            print_local(first(chain(
+                imap(attrgetter('path'), find_child_matches(entries, needles)),
+                # always return a path to calling shell functions
+                ['.'],
+            )))
         else:
             print_local(first(chain(
                 imap(attrgetter('path'), find_matches(entries, needles)),

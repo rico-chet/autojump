@@ -180,3 +180,12 @@ class TestMatchTerminal(object):
 
         matches = match_terminal(['foo', 'baz'], haystack)
         assert set(matches) == {Entry('/foo/moo/baz', 2)}
+
+    def test_needles_only_match_when_they_match_separate_parts_of_entry(self):
+        haystack = [Entry('/foobar', 1), Entry('/foobaz/baz', 2)]
+
+        matches = match_terminal(['foo', 'bar'], haystack)
+        assert not list(matches)
+
+        matches = match_terminal(['foo', 'baz'], haystack)
+        assert set(matches) == {Entry('/foobaz/baz', 2)}
