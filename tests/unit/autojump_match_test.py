@@ -9,6 +9,7 @@ sys.path.append(os.path.join(os.getcwd(), 'bin'))  # noqa
 from autojump_data import Entry
 from autojump_match import match_anywhere
 from autojump_match import match_consecutive
+from autojump_match import match_terminal
 
 
 class TestMatchAnywhere(object):
@@ -129,3 +130,53 @@ class TestMatchConsecutive(object):
     def test_wildcard_in_needle(self, haystack):
         assert list(match_consecutive(['*', 'this'], haystack)) == []
         assert list(match_consecutive(['*', 'edge', 'case'], haystack)) == [self.entry6]
+
+
+class TestMatchTerminal(object):
+    def test_a_needle_at_the_end_of_an_entry_is_matched(self):
+        haystack = [Entry('/bar', 1), Entry('/baz', 2)]
+
+        matches = match_terminal(['bar'], haystack)
+        assert set(matches) == {Entry('/bar', 1)}
+
+        matches = match_terminal(['baz'], haystack)
+        assert set(matches) == {Entry('/baz', 2)}
+
+    def test_a_needle_amid_an_entry_is_not_matched(self):
+        haystack = [Entry('/bar/foo', 1), Entry('/baz/foo', 2)]
+
+        matches = match_terminal(['bar'], haystack)
+        assert not list(matches)
+
+        matches = match_terminal(['baz'], haystack)
+        assert not list(matches)
+
+    def test_a_partial_needle_at_the_end_of_an_entry_is_matched(self):
+        haystack = [Entry('/foo/bar', 1), Entry('/foo/baz', 2)]
+
+        matches = match_terminal(['ba'], haystack)
+
+        assert set(matches) == {Entry('/foo/bar', 1), Entry('/foo/baz', 2)}
+
+    def test_needles_are_matched_in_the_order_of_appearance(self):
+        haystack = [
+            Entry('/foo/bar', 1),
+            Entry('/foo/baz', 2),
+            Entry('/moo/bar', 3),
+            Entry('/moo/baz', 4),
+        ]
+
+        matches = match_terminal(['foo', 'ba'], haystack)
+        assert set(matches) == {Entry('/foo/bar', 1), Entry('/foo/baz', 2)}
+
+        matches = match_terminal(['moo', 'ba'], haystack)
+        assert set(matches) == {Entry('/moo/bar', 3), Entry('/moo/baz', 4)}
+
+    def test_needles_are_matched_inconsecutively(self):
+        haystack = [Entry('/foo/moo/bar', 1), Entry('/foo/moo/baz', 2)]
+
+        matches = match_terminal(['foo', 'bar'], haystack)
+        assert set(matches) == {Entry('/foo/moo/bar', 1)}
+
+        matches = match_terminal(['foo', 'baz'], haystack)
+        assert set(matches) == {Entry('/foo/moo/baz', 2)}
